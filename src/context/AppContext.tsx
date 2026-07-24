@@ -12,7 +12,8 @@ import {
   VillageAgenda, 
   AuditLog, 
   NotificationItem,
-  VillageConfig
+  VillageConfig,
+  ActiveStatus
 } from '../types';
 import { 
   INITIAL_RESIDENTS, 
@@ -28,7 +29,7 @@ import {
   INITIAL_NOTIFICATIONS,
   INITIAL_VILLAGE_CONFIG
 } from '../data/initialData';
-import { formatResidentForSheet } from '../utils/helpers';
+import { formatResidentForSheet, normalizeDateToYYYYMMDD } from '../utils/helpers';
 
 export type ViewTab = 
   | 'dashboard' 
@@ -79,6 +80,8 @@ interface AppContextType {
   addResident: (resident: Omit<Resident, 'id' | 'createdAt' | 'updatedAt' | 'history'>) => Resident;
   updateResident: (id: string, resident: Partial<Resident>) => void;
   deleteResident: (id: string) => void;
+  bulkDeleteResidents: (ids: string[]) => void;
+  bulkUpdateStatusResidents: (ids: string[], status: ActiveStatus) => void;
   
   addFamilyCard: (kk: Omit<FamilyCard, 'id' | 'history'>) => void;
   updateFamilyCard: (id: string, kk: Partial<FamilyCard>) => void;
@@ -411,6 +414,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     logAudit('Data Penduduk', 'Hapus Penduduk', `Menghapus data NIK ${target?.nik || id} (${target?.namaLengkap || ''})`);
   };
 
+  const bulkDeleteResidents = (ids: string[]) => {
+    if (!ids || ids.length === 0) return;
+    setResidents(prev => prev.filter(r => !ids.includes(r.id)));
+    logAudit('Data Penduduk', 'Hapus Sekaligus', `Menghapus ${ids.length} data penduduk sekaligus`);
+    addNotification('Hapus Massal Penduduk', `${ids.length} data penduduk telah dihapus.`, 'warning', 'resident');
+  };
+
+  const bulkUpdateStatusResidents = (ids: string[], newStatus: ActiveStatus) => {
+    if (!ids || ids.length === 0) return;
+    const now = new Date().toISOString();
+    setResidents(prev => prev.map(r => {
+      if (ids.includes(r.id)) {
+        const updated = { ...r, statusAktif: newStatus, updatedAt: now };
+        updated.history = [
+          {
+            id: 'H-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+            timestamp: new Date().toLocaleString('id-ID'),
+            user: currentUserName,
+            role: currentUserRole,
+            action: 'Edit Massal',
+            notes: `Mengubah status aktif menjadi ${newStatus}`
+          },
+          ...(r.history || [])
+        ];
+        return updated;
+      }
+      return r;
+    }));
+    logAudit('Data Penduduk', 'Update Status Massal', `Mengubah status aktif ${ids.length} penduduk menjadi ${newStatus}`);
+    addNotification('Status Massal Diperbarui', `Status aktif ${ids.length} data penduduk diubah menjadi ${newStatus}.`, 'success', 'resident');
+  };
+
   // Family Card Handlers
   const addFamilyCard = (kkData: Omit<FamilyCard, 'id' | 'history'>) => {
     const id = 'KK-' + String(familyCards.length + 1).padStart(3, '0');
@@ -624,7 +659,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             const noKk = getVal('NO_KK', 'no_kk', 'nokk') || '3201121005100001';
             const namaLengkap = getVal('NAMA_LGKP', 'nama_lengkap', 'namalengkap', 'nama') || 'Warga Desa';
             const jenisKelamin = getVal('JENIS_KELAMIN', 'jenis_kelamin', 'jeniskelamin') || 'Laki-laki';
-            const tanggalLahir = getVal('TANGGAL_LAHIR', 'tanggal_lahir', 'tanggallahir') || '1990-01-01';
+            const rawTanggalLahir = getVal('TANGGAL_LAHIR', 'tanggal_lahir', 'tanggallahir') || '1990-01-01';
+            const tanggalLahir = normalizeDateToYYYYMMDD(rawTanggalLahir);
             const tempatLahir = getVal('TEMPAT_LAHIR', 'tempat_lahir', 'tempatlahir') || 'Bogor';
             const alamatLengkap = getVal('ALAMAT', 'alamat_lengkap', 'alamat') || 'Jl. Desa Utama No. 12';
             const rt = getVal('NO_RT', 'rt') || '001';
@@ -843,6 +879,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addResident,
         updateResident,
         deleteResident,
+        bulkDeleteResidents,
+        bulkUpdateStatusResidents,
         addFamilyCard,
         updateFamilyCard,
         deleteFamilyCard,

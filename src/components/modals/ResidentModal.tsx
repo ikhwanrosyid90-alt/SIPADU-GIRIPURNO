@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Resident, Gender, Religion, Education, Occupation, MaritalStatus, BloodType, ResidenceStatus, ActiveStatus } from '../../types';
 import { X, Save, UserCheck, AlertCircle, Upload, FileCheck } from 'lucide-react';
+import { normalizeDateToYYYYMMDD } from '../../utils/helpers';
 
 interface ResidentModalProps {
   isOpen: boolean;
@@ -62,7 +63,7 @@ export const ResidentModal: React.FC<ResidentModalProps> = ({
         namaAyah: residentToEdit.namaAyah || '',
         namaIbu: residentToEdit.namaIbu || '',
         tempatLahir: residentToEdit.tempatLahir || '',
-        tanggalLahir: residentToEdit.tanggalLahir || '1995-01-01',
+        tanggalLahir: normalizeDateToYYYYMMDD(residentToEdit.tanggalLahir || '1995-01-01'),
         jenisKelamin: residentToEdit.jenisKelamin || 'Laki-laki',
         agama: residentToEdit.agama || 'Islam',
         pendidikan: residentToEdit.pendidikan || 'SMA/Sederajat',

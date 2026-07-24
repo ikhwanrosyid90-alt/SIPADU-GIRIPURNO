@@ -20,7 +20,12 @@ import {
   CloudUpload,
   CloudDownload,
   Database,
-  Radio
+  Radio,
+  CheckSquare,
+  Square,
+  Users,
+  Check,
+  X
 } from 'lucide-react';
 
 interface ResidentViewProps {
@@ -41,6 +46,8 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
   const { 
     residents, 
     deleteResident, 
+    bulkDeleteResidents,
+    bulkUpdateStatusResidents,
     dusunList, 
     syncModuleToGoogleSheets, 
     villageConfig,
@@ -53,6 +60,10 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState('');
+
+  // Bulk Selection State
+  const [selectedResidentIds, setSelectedResidentIds] = useState<string[]>([]);
+  const [selectedNewStatus, setSelectedNewStatus] = useState<ActiveStatus>('Aktif');
 
   const handleSaveAllToGoogleSheet = async () => {
     setIsSyncing(true);
@@ -110,6 +121,55 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
 
     return matchesSearch && matchesDusun && matchesRw && matchesRt && matchesAgama && matchesPendidikan && matchesPekerjaan && matchesStatus && matchesMiskin;
   });
+
+  // Bulk Selection Helpers
+  const isAllSelected = filteredResidents.length > 0 && filteredResidents.every(r => selectedResidentIds.includes(r.id));
+  
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedResidentIds([]);
+    } else {
+      setSelectedResidentIds(filteredResidents.map(r => r.id));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedResidentIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const selectedResidentsList = residents.filter(r => selectedResidentIds.includes(r.id));
+
+  const handleBulkDelete = () => {
+    if (selectedResidentIds.length === 0) return;
+    const names = selectedResidentsList.map(r => `${r.namaLengkap} (${r.nik})`).join(', ');
+    if (confirm(`Apakah Anda yakin ingin MENGHAPUS ${selectedResidentIds.length} data warga yang dipilih berikut?\n\nDaftar Terpilih:\n${names}\n\nTindakan ini tidak dapat dibatalkan.`)) {
+      bulkDeleteResidents(selectedResidentIds);
+      setSelectedResidentIds([]);
+    }
+  };
+
+  const handleBulkStatusChange = () => {
+    if (selectedResidentIds.length === 0) return;
+    if (confirm(`Ubah status aktif ${selectedResidentIds.length} warga yang dipilih menjadi '${selectedNewStatus}'?`)) {
+      bulkUpdateStatusResidents(selectedResidentIds, selectedNewStatus);
+      setSelectedResidentIds([]);
+    }
+  };
+
+  const handleBulkSaveToSheet = async () => {
+    if (selectedResidentIds.length === 0) return;
+    setIsSyncing(true);
+    setSyncStatusMsg(`Menyimpan ${selectedResidentIds.length} warga ke Google Sheet...`);
+    const result = await sendToAppsScript('Data Penduduk', selectedResidentsList);
+    setIsSyncing(false);
+    if (result.success) {
+      alert(`✅ Berhasil! ${selectedResidentIds.length} data warga terpilih telah tersimpan di Google Sheets.`);
+    } else {
+      alert(`⚠️ ${result.message}`);
+    }
+  };
 
   const handleExportExcel = () => {
     const exportData = filteredResidents.map((r, i) => ({
@@ -317,6 +377,7 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
             <option value="Aktif">Aktif</option>
             <option value="Meninggal">Meninggal</option>
             <option value="Pindah">Pindah</option>
+            <option value="Tidak Aktif">Tidak Aktif</option>
           </select>
 
           <select value={filterMiskin} onChange={(e) => setFilterMiskin(e.target.value)} className="bg-slate-50 border border-slate-200 rounded-lg p-1.5 text-[11px]">
@@ -327,12 +388,114 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
         </div>
       </div>
 
+      {/* Bulk Selection Control Panel ("Pilihan nya siapa aja") */}
+      {selectedResidentIds.length > 0 && (
+        <div className="bg-slate-900 text-white p-4 rounded-2xl border border-blue-500/40 shadow-xl space-y-3 animate-fadeIn">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <CheckSquare className="w-5 h-5 text-blue-400" />
+              <span className="font-extrabold text-sm text-white">
+                {selectedResidentIds.length} Warga Terpilih
+              </span>
+              <span className="text-xs text-slate-400 hidden sm:inline">
+                (dari total {filteredResidents.length} data tampil)
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Bulk Status Update */}
+              <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700">
+                <select
+                  value={selectedNewStatus}
+                  onChange={(e) => setSelectedNewStatus(e.target.value as ActiveStatus)}
+                  className="bg-slate-900 text-white text-xs font-bold px-2 py-1 rounded-lg border border-slate-700 focus:outline-hidden"
+                >
+                  <option value="Aktif">Status: Aktif</option>
+                  <option value="Meninggal">Status: Meninggal</option>
+                  <option value="Pindah">Status: Pindah</option>
+                  <option value="Tidak Aktif">Status: Tidak Aktif</option>
+                </select>
+                <button
+                  onClick={handleBulkStatusChange}
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all"
+                >
+                  Ubah Status Massal
+                </button>
+              </div>
+
+              {/* Bulk Delete */}
+              <button
+                onClick={handleBulkDelete}
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-md shadow-rose-600/30"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Hapus Sekaligus
+              </button>
+
+              {/* Bulk Save to Sheets */}
+              <button
+                onClick={handleBulkSaveToSheet}
+                disabled={isSyncing}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/30 disabled:opacity-50"
+              >
+                <CloudUpload className="w-3.5 h-3.5" />
+                Simpan ke Sheet
+              </button>
+
+              {/* Clear Selection */}
+              <button
+                onClick={() => setSelectedResidentIds([])}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition-colors flex items-center gap-1"
+              >
+                <X className="w-3.5 h-3.5" />
+                Batal Pilih
+              </button>
+            </div>
+          </div>
+
+          {/* List Preview: Pilihan Nya Siapa Aja */}
+          <div className="space-y-1">
+            <div className="text-[11px] font-bold text-blue-300 uppercase tracking-wider flex items-center gap-1">
+              <Users className="w-3.5 h-3.5 text-blue-400" />
+              Pilihan nya siapa aja ({selectedResidentsList.length} warga):
+            </div>
+            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 bg-slate-950/70 rounded-xl border border-slate-800">
+              {selectedResidentsList.map((r) => (
+                <span
+                  key={r.id}
+                  className="inline-flex items-center gap-1.5 bg-blue-900/60 text-blue-100 text-[11px] font-medium px-2.5 py-1 rounded-lg border border-blue-700/50 shadow-2xs"
+                >
+                  <strong className="text-white">{r.namaLengkap}</strong>
+                  <span className="text-[9px] text-blue-300 font-mono">({r.nik})</span>
+                  <button
+                    onClick={() => toggleSelectOne(r.id)}
+                    className="hover:text-rose-400 ml-0.5 font-bold text-slate-400 hover:bg-slate-800 rounded px-1"
+                    title="Batal pilih warga ini"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left text-slate-700">
             <thead className="bg-slate-900 text-white uppercase text-[10px] font-bold tracking-wider">
               <tr>
+                <th className="p-3 text-center w-10">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 cursor-pointer accent-blue-600 rounded"
+                    title="Pilih Semua Warga di Halaman Ini"
+                  />
+                </th>
                 <th className="p-3 text-center">No</th>
                 <th className="p-3">NIK / No. KK</th>
                 <th className="p-3">Nama Lengkap</th>
@@ -347,15 +510,27 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
             <tbody className="divide-y divide-slate-100">
               {filteredResidents.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-slate-400">
+                  <td colSpan={10} className="p-8 text-center text-slate-400">
                     Tidak ada data penduduk ditemukan dengan kriteria filter tersebut.
                   </td>
                 </tr>
               ) : (
                 filteredResidents.map((r, idx) => {
                   const age = calculateAge(r.tanggalLahir);
+                  const isSelected = selectedResidentIds.includes(r.id);
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr 
+                      key={r.id} 
+                      className={`transition-colors ${isSelected ? 'bg-blue-50/80 border-l-4 border-l-blue-600' : 'hover:bg-slate-50/80'}`}
+                    >
+                      <td className="p-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectOne(r.id)}
+                          className="w-4 h-4 cursor-pointer accent-blue-600 rounded"
+                        />
+                      </td>
                       <td className="p-3 text-center font-mono font-bold text-slate-400">{idx + 1}</td>
                       <td className="p-3">
                         <div className="font-mono font-bold text-blue-900">{r.nik}</div>
@@ -387,7 +562,10 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
                       </td>
                       <td className="p-3 text-center">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                          r.statusAktif === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                          r.statusAktif === 'Aktif' ? 'bg-emerald-100 text-emerald-800' :
+                          r.statusAktif === 'Meninggal' ? 'bg-rose-100 text-rose-800' :
+                          r.statusAktif === 'Pindah' ? 'bg-amber-100 text-amber-800' :
+                          'bg-slate-100 text-slate-800'
                         }`}>
                           {r.statusAktif}
                         </span>

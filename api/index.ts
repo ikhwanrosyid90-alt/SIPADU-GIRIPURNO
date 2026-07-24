@@ -19,15 +19,29 @@ app.get("/api/apps-script/fetch", async (req, res) => {
   try {
     const scriptUrl = (req.query.url as string) || DEFAULT_APPS_SCRIPT_URL;
     const sheetName = (req.query.sheet as string) || "Data Penduduk";
-    const targetUrl = `${scriptUrl}?sheet=${encodeURIComponent(sheetName)}`;
+    const cacheBuster = Date.now();
+    const targetUrl = `${scriptUrl}${scriptUrl.includes('?') ? '&' : '?'}sheet=${encodeURIComponent(sheetName)}&t=${cacheBuster}`;
 
-    const response = await fetch(targetUrl, { redirect: "follow" });
+    const response = await fetch(targetUrl, {
+      method: "GET",
+      headers: { "Accept": "application/json, text/plain, */*" },
+      redirect: "follow"
+    });
+
     const text = await response.text();
     let data;
     try {
       data = JSON.parse(text);
     } catch {
       data = { status: "raw", text };
+    }
+
+    if (data && data.error) {
+      return res.status(400).json({
+        success: false,
+        error: data.error || "Gagal mengambil data dari Google Sheet",
+        data
+      });
     }
 
     res.json({
@@ -49,7 +63,7 @@ app.post("/api/apps-script/send", async (req, res) => {
 
     const response = await fetch(targetUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
       redirect: "follow"
     });

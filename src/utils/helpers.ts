@@ -2,10 +2,72 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+export function normalizeDateToYYYYMMDD(val: any): string {
+  if (!val) return '1990-01-01';
+  const str = String(val).trim();
+  if (!str) return '1990-01-01';
+
+  // 1. ISO string with T (e.g., 1993-06-18T17:00:00.000Z or 1993-06-18T00:00:00)
+  if (str.includes('T')) {
+    const parts = str.split('T')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(parts)) {
+      return parts;
+    }
+  }
+
+  // 2. YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return str;
+  }
+
+  // 3. DD/MM/YYYY or DD-MM-YYYY or D/M/YYYY or D-M-YYYY
+  const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0');
+    const month = dmyMatch[2].padStart(2, '0');
+    const year = dmyMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // 4. YYYY/MM/DD
+  const ymdMatch = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (ymdMatch) {
+    const year = ymdMatch[1];
+    const month = ymdMatch[2].padStart(2, '0');
+    const day = ymdMatch[3].padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // 5. Excel serial number check (e.g. 34138)
+  const num = Number(str);
+  if (!isNaN(num) && num > 1000 && num < 100000) {
+    const excelEpoch = new Date(1899, 11, 30);
+    const dateFromExcel = new Date(excelEpoch.getTime() + num * 86400000);
+    const yyyy = dateFromExcel.getFullYear();
+    const mm = String(dateFromExcel.getMonth() + 1).padStart(2, '0');
+    const dd = String(dateFromExcel.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // 6. Generic JS Date parsing fallback
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    if (yyyy > 1900 && yyyy < 2100) {
+      return `${yyyy}-${mm}-${dd}`;
+    }
+  }
+
+  return '1990-01-01';
+}
+
 export function calculateAge(birthDateString: string): number {
   if (!birthDateString) return 0;
+  const cleanDateStr = normalizeDateToYYYYMMDD(birthDateString);
   const today = new Date();
-  const birthDate = new Date(birthDateString);
+  const birthDate = new Date(cleanDateStr);
   let age = today.getFullYear() - birthDate.getFullYear();
   const monthDiff = today.getMonth() - birthDate.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -93,13 +155,14 @@ export function exportTableToPDF(title: string, headers: string[], rows: any[][]
 }
 
 export function formatResidentForSheet(res: any) {
+  const cleanTanggalLahir = normalizeDateToYYYYMMDD(res.tanggalLahir);
   return {
     NIK: String(res.nik || ''),
     NO_KK: String(res.noKk || ''),
     NAMA_LGKP: String(res.namaLengkap || ''),
     JENIS_KELAMIN: String(res.jenisKelamin || 'Laki-laki'),
-    TANGGAL_LAHIR: String(res.tanggalLahir || ''),
-    UMUR: calculateAge(res.tanggalLahir),
+    TANGGAL_LAHIR: cleanTanggalLahir,
+    UMUR: calculateAge(cleanTanggalLahir),
     TEMPAT_LAHIR: String(res.tempatLahir || ''),
     ALAMAT: String(res.alamatLengkap || ''),
     NO_RT: String(res.rt || '001'),

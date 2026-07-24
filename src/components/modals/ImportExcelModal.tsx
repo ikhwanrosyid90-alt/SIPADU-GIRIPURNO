@@ -3,6 +3,8 @@ import { useApp } from '../../context/AppContext';
 import * as XLSX from 'xlsx';
 import { X, FileSpreadsheet, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
 
+import { normalizeDateToYYYYMMDD } from '../../utils/helpers';
+
 interface ImportExcelModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -50,7 +52,7 @@ export const ImportExcelModal: React.FC<ImportExcelModalProps> = ({ isOpen, onCl
         noKk: String(row.NO_KK || row.noKk || '3201121005100001'),
         namaLengkap: String(row.NAMA || row.namaLengkap || row.Nama || 'Warga Tanpa Nama'),
         tempatLahir: String(row.TEMPAT_LAHIR || row.tempatLahir || 'Bogor'),
-        tanggalLahir: String(row.TANGGAL_LAHIR || row.tanggalLahir || '1995-01-01'),
+        tanggalLahir: normalizeDateToYYYYMMDD(row.TANGGAL_LAHIR || row.tanggalLahir || '1995-01-01'),
         jenisKelamin: (row.JK || row.jenisKelamin) === 'Perempuan' ? 'Perempuan' : 'Laki-laki',
         agama: (row.AGAMA || row.agama || 'Islam') as any,
         pendidikan: (row.PENDIDIKAN || row.pendidikan || 'SMA/Sederajat') as any,
