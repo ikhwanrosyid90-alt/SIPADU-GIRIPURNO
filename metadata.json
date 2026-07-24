@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Administrasi Kependudukan Desa (SIPADU)",
+  "description": "Aplikasi Administrasi Kependudukan Desa terpadu dengan dashboard statistik, data KK, mutasi, bantuan sosial, wilayah, organisasi, agenda, kalender, dan integrasi Google Sheets & Drive.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
