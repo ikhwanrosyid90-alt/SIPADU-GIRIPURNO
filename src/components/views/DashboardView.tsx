@@ -41,7 +41,7 @@ interface DashboardViewProps {
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenPrintModal, onOpenGoogleModal }) => {
-  const { residents, familyCards, mutations, assistance, dusunList, agendas, setActiveView } = useApp();
+  const { residents, familyCards, mutations, assistance, dusunList, agendas, setActiveView, villageConfig } = useApp();
 
   // Metrics calculation
   const totalPenduduk = residents.length;
@@ -106,9 +106,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenPrintModal, 
         <div className="space-y-1 relative z-10">
           <div className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-200 border border-blue-400/30 text-xs px-3 py-1 rounded-full font-semibold">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            SIPADU Dukcapil Desa Sukamaju Real-time
+            SIPADU Dukcapil Desa {villageConfig.namaDesa || 'Sukamaju'} Real-time
           </div>
-          <h2 className="text-2xl font-extrabold tracking-tight">Dashboard Administrasi & Demografi Desa</h2>
+          <h2 className="text-2xl font-extrabold tracking-tight">Dashboard Administrasi & Demografi Desa {villageConfig.namaDesa}</h2>
           <p className="text-slate-300 text-xs max-w-2xl leading-relaxed">
             Sistem terintegrasi pengelolaan data kependudukan, kartu keluarga, mutasi penduduk, bantuan sosial, wilayah, organisasi, dan agenda kegiatan desa.
           </p>
@@ -153,7 +153,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onOpenPrintModal, 
               KK Aktif
             </span>
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Terbit KK Resmi Kabupaten Bogor</p>
+          <p className="text-[10px] text-slate-400 mt-1">Terbit KK Resmi Kabupaten {villageConfig.kabupaten || 'Bogor'}</p>
         </div>
 
         {/* Card 3: Gender Ratio */}

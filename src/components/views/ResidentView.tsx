@@ -33,7 +33,7 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
   onOpenImportModal,
   onOpenGoogleModal
 }) => {
-  const { residents, deleteResident, dusunList, syncModuleToGoogleSheets } = useApp();
+  const { residents, deleteResident, dusunList, syncModuleToGoogleSheets, villageConfig } = useApp();
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,7 +90,8 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
       Status_Aktif: r.statusAktif,
       Ekonomi_Miskin: r.isMiskin ? 'YA' : 'TIDAK'
     }));
-    exportToExcel(exportData, 'DATA_PENDUDUK_DESA_SUKAMUJU');
+    const cleanDesa = (villageConfig.namaDesa || 'DESA').toUpperCase().replace(/\s+/g, '_');
+    exportToExcel(exportData, `DATA_PENDUDUK_DESA_${cleanDesa}`);
   };
 
   const handleExportPDF = () => {
@@ -107,7 +108,7 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
       `${r.rt}/${r.rw}`,
       r.statusAktif
     ]);
-    exportTableToPDF('LAPORAN MASTER DATA PENDUDUK DESA', headers, rows, 'REKAP_PENDUDUK_DESA');
+    exportTableToPDF(`LAPORAN MASTER DATA PENDUDUK DESA ${(villageConfig.namaDesa || '').toUpperCase()}`, headers, rows, 'REKAP_PENDUDUK_DESA', villageConfig);
   };
 
   return (

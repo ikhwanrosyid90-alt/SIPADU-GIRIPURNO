@@ -57,16 +57,22 @@ export function exportToExcel(data: any[], fileName: string) {
 }
 
 // Export simple table to PDF
-export function exportTableToPDF(title: string, headers: string[], rows: any[][], fileName: string) {
+export function exportTableToPDF(title: string, headers: string[], rows: any[][], fileName: string, villageConfig?: any) {
   const doc = new jsPDF('landscape');
   
+  const kab = villageConfig?.kabupaten ? villageConfig.kabupaten.toUpperCase() : 'BOGOR';
+  const kec = villageConfig?.kecamatan ? villageConfig.kecamatan.toUpperCase() : 'CIBINONG';
+  const desa = villageConfig?.namaDesa ? villageConfig.namaDesa.toUpperCase() : 'GIRIPURNO';
+  const alamat = villageConfig?.alamatKantor || 'Jl. Raya Desa No. 01';
+  const email = villageConfig?.emailDesa || 'admin@desa.id';
+
   // Header Kop Surat
   doc.setFontSize(16);
-  doc.text('PEMERINTAH KABUPATEN BOGOR', 14, 15);
+  doc.text(`PEMERINTAH KABUPATEN ${kab}`, 14, 15);
   doc.setFontSize(14);
-  doc.text('KECAMATAN CIBINONG - DESA SUKAMAJU', 14, 22);
+  doc.text(`KECAMATAN ${kec} - DESA ${desa}`, 14, 22);
   doc.setFontSize(10);
-  doc.text('Jl. Raya Desa Sukamaju No. 01, Kode Pos 16911 | Email: admin@desa-sukamaju.id', 14, 27);
+  doc.text(`${alamat} | Email: ${email}`, 14, 27);
   doc.line(14, 29, 280, 29);
 
   doc.setFontSize(14);

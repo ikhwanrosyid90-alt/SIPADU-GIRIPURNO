@@ -19,10 +19,11 @@ interface ReportsViewProps {
 }
 
 export const ReportsView: React.FC<ReportsViewProps> = ({ onOpenGoogleModal, onOpenPrintModal }) => {
-  const { residents, familyCards, mutations, assistance, organizations, agendas } = useApp();
+  const { residents, familyCards, mutations, assistance, organizations, agendas, villageConfig } = useApp();
   const [selectedReportType, setSelectedReportType] = useState('REKAP_DEMOGRAFI');
 
   const handlePrintFullReport = () => {
+    const namaDesaUpper = (villageConfig.namaDesa || 'SUKAMUJU').toUpperCase();
     if (selectedReportType === 'REKAP_DEMOGRAFI') {
       const headers = ['Indikator Demografi', 'Jumlah / Persentase', 'Keterangan Tambahan'];
       const rows = [
@@ -33,7 +34,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onOpenGoogleModal, onO
         ['Penduduk Rentan / Miskin (DTKS)', `${residents.filter(r => r.isMiskin).length} Jiwa`, 'Penerima Potensi Bansos'],
         ['Total Penerima Bantuan Sosial', `${assistance.length} Penerima`, 'PKH, BPNT, BLT Dana Desa']
       ];
-      exportTableToPDF('LAPORAN REKAPITULASI STATISTIK DEMOGRAFI DESA SUKAMUJU', headers, rows, 'LAPORAN_DEMOGRAFI_DESA');
+      exportTableToPDF(`LAPORAN REKAPITULASI STATISTIK DEMOGRAFI DESA ${namaDesaUpper}`, headers, rows, 'LAPORAN_DEMOGRAFI_DESA', villageConfig);
     } else if (selectedReportType === 'PENERIMA_BANSOS') {
       const headers = ['No', 'Nama Penerima', 'NIK', 'Jenis Bantuan', 'Nominal', 'Penyaluran'];
       const rows = assistance.map((a, i) => [
@@ -44,7 +45,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ onOpenGoogleModal, onO
         formatRupiah(a.nominalBantuan),
         a.statusPenyaluran
       ]);
-      exportTableToPDF('LAPORAN PENYALURAN BANTUAN SOSIAL DESA SUKAMUJU', headers, rows, 'LAPORAN_BANSOS_DESA');
+      exportTableToPDF(`LAPORAN PENYALURAN BANTUAN SOSIAL DESA ${namaDesaUpper}`, headers, rows, 'LAPORAN_BANSOS_DESA', villageConfig);
     }
   };
 

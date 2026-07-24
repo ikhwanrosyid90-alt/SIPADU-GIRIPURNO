@@ -17,7 +17,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
   preselectedResident,
   preselectedFamilyCard
 }) => {
-  const { residents, familyCards, organizations } = useApp();
+  const { residents, familyCards, organizations, villageConfig } = useApp();
 
   const [docType, setDocType] = useState<'biodata' | 'kk' | 'pengantar' | 'sk_org'>('biodata');
   const [selectedResidentId, setSelectedResidentId] = useState(preselectedResident?.id || residents[0]?.id || '');
@@ -196,11 +196,22 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
         {/* Document Printable View Canvas */}
         <div className="p-8 bg-white min-h-[600px] text-slate-900 printable-area font-serif text-sm leading-relaxed">
           {/* Header Kop Surat */}
-          <div className="text-center border-b-4 border-double border-slate-900 pb-3 mb-6">
-            <h2 className="font-bold text-base uppercase tracking-wider">PEMERINTAH KABUPATEN BOGOR</h2>
-            <h2 className="font-extrabold text-lg uppercase tracking-widest">KECAMATAN CIBINONG - DESA SUKAMAJU</h2>
+          <div className="text-center border-b-4 border-double border-slate-900 pb-3 mb-6 relative">
+            {villageConfig.logoUrl && (
+              <img 
+                src={villageConfig.logoUrl} 
+                alt="Logo Desa" 
+                className="w-16 h-16 object-contain absolute left-0 top-0 hidden sm:block" 
+              />
+            )}
+            <h2 className="font-bold text-base uppercase tracking-wider">
+              PEMERINTAH KABUPATEN {(villageConfig.kabupaten || 'BOGOR').toUpperCase()}
+            </h2>
+            <h2 className="font-extrabold text-lg uppercase tracking-widest">
+              KECAMATAN {(villageConfig.kecamatan || 'CIBINONG').toUpperCase()} - DESA {(villageConfig.namaDesa || 'SUKAMUJU').toUpperCase()}
+            </h2>
             <p className="text-xs font-sans text-slate-600 mt-1">
-              Jl. Raya Desa Sukamaju No. 01 Kode Pos 16911 | Email: sekretariat@desa-sukamaju.id
+              {villageConfig.alamatKantor || 'Jl. Raya Desa No. 01'} Kode Pos {villageConfig.kodePos || '16911'} | Email: {villageConfig.emailDesa || 'admin@desa.id'}
             </p>
           </div>
 
@@ -208,7 +219,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
           {docType === 'biodata' && resident && (
             <div className="space-y-6 font-sans text-xs">
               <div className="text-center">
-                <h3 className="font-extrabold text-base underline uppercase tracking-wide">BIODATA PENDUDUK WARA DESA</h3>
+                <h3 className="font-extrabold text-base underline uppercase tracking-wide">BIODATA PENDUDUK WARGA DESA</h3>
                 <p className="text-xs text-slate-600 font-mono">Nomor Dokumen: BPD/{resident.nik}/2026</p>
               </div>
 
@@ -216,7 +227,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                 {/* Photo box */}
                 <div className="col-span-1 border-2 border-slate-400 p-2 text-center h-40 flex flex-col items-center justify-center bg-slate-50">
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Pas Foto 3x4</span>
-                  <span className="text-[9px] text-slate-400">Cap Desa Sukamaju</span>
+                  <span className="text-[9px] text-slate-400">Cap Desa {villageConfig.namaDesa || 'Sukamaju'}</span>
                 </div>
 
                 {/* Data Fields */}
@@ -376,7 +387,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
               </div>
 
               <p className="indent-8 text-justify leading-relaxed">
-                Orang tersebut di atas adalah benar-benar warga penduduk Desa Sukamaju yang berdomisili di alamat tersebut. Surat pengantar ini diterbitkan untuk keperluan: <strong className="underline">{keperluanSurat}</strong> (Permohonan {suratJenis}).
+                Orang tersebut di atas adalah benar-benar warga penduduk Desa {villageConfig.namaDesa} yang berdomisili di alamat tersebut. Surat pengantar ini diterbitkan untuk keperluan: <strong className="underline">{keperluanSurat}</strong> (Permohonan {suratJenis}).
               </p>
 
               <p className="indent-8 text-justify leading-relaxed">
@@ -390,10 +401,11 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                   <p className="font-bold underline">{resident.namaLengkap}</p>
                 </div>
                 <div>
-                  <p>Sukamaju, {formatDateIndo(new Date().toISOString())}</p>
-                  <p className="font-bold">Kepala Desa Sukamaju</p>
+                  <p>{villageConfig.namaDesa}, {formatDateIndo(new Date().toISOString())}</p>
+                  <p className="font-bold">Kepala Desa {villageConfig.namaDesa}</p>
                   <div className="h-16"></div>
-                  <p className="font-bold underline uppercase">H. Ahmad Dahlan, S.E.</p>
+                  <p className="font-bold underline uppercase">{villageConfig.namaKepalaDesa || 'H. Sukarna S.AP'}</p>
+                  {villageConfig.nipKepalaDesa && <p className="text-[10px] font-mono text-slate-500">NIP. {villageConfig.nipKepalaDesa}</p>}
                 </div>
               </div>
             </div>
@@ -403,14 +415,14 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
           {docType === 'sk_org' && org && (
             <div className="space-y-5 font-serif text-xs">
               <div className="text-center space-y-1">
-                <h3 className="font-bold text-sm uppercase">SURAT KEPUTUSAN KEPALA DESA SUKAMAJU</h3>
+                <h3 className="font-bold text-sm uppercase">SURAT KEPUTUSAN KEPALA DESA {(villageConfig.namaDesa || 'SUKAMUJU').toUpperCase()}</h3>
                 <p className="text-xs font-mono">NOMOR: {org.skNomor || '141/01/SK-KADES/2026'}</p>
                 <p className="font-bold uppercase text-xs pt-2">TENTANG PENETAPAN PENGURUS {org.namaOrganisasi.toUpperCase()}</p>
               </div>
 
               <div className="space-y-2 text-justify">
                 <p><strong>MEMUTUSKAN:</strong></p>
-                <p>Menetapkan susunan pengurus {org.namaOrganisasi} Desa Sukamaju Masa Jabatan {org.masaJabatan} sebagai berikut:</p>
+                <p>Menetapkan susunan pengurus {org.namaOrganisasi} Desa {villageConfig.namaDesa} Masa Jabatan {org.masaJabatan} sebagai berikut:</p>
               </div>
 
               <div className="pl-4 font-sans space-y-1 bg-slate-50 p-4 border border-slate-300 rounded">
@@ -423,11 +435,12 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
 
               <div className="pt-8 flex justify-end text-center font-sans">
                 <div>
-                  <p>Ditetapkan di: Sukamaju</p>
+                  <p>Ditetapkan di: {villageConfig.namaDesa}</p>
                   <p>Pada tanggal: {formatDateIndo(org.skTanggal || new Date().toISOString())}</p>
-                  <p className="font-bold mt-2">Kepala Desa Sukamaju</p>
+                  <p className="font-bold mt-2">Kepala Desa {villageConfig.namaDesa}</p>
                   <div className="h-16"></div>
-                  <p className="font-bold underline uppercase">H. Ahmad Dahlan, S.E.</p>
+                  <p className="font-bold underline uppercase">{villageConfig.namaKepalaDesa || 'H. Sukarna S.AP'}</p>
+                  {villageConfig.nipKepalaDesa && <p className="text-[10px] font-mono text-slate-500">NIP. {villageConfig.nipKepalaDesa}</p>}
                 </div>
               </div>
             </div>
