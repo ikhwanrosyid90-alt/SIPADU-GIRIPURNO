@@ -15,7 +15,12 @@ import {
   Upload, 
   CheckCircle2, 
   UserCheck,
-  RotateCcw
+  RotateCcw,
+  RefreshCw,
+  CloudUpload,
+  CloudDownload,
+  Database,
+  Radio
 } from 'lucide-react';
 
 interface ResidentViewProps {
@@ -33,7 +38,45 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
   onOpenImportModal,
   onOpenGoogleModal
 }) => {
-  const { residents, deleteResident, dusunList, syncModuleToGoogleSheets, villageConfig } = useApp();
+  const { 
+    residents, 
+    deleteResident, 
+    dusunList, 
+    syncModuleToGoogleSheets, 
+    villageConfig,
+    sendToAppsScript,
+    fetchFromAppsScript,
+    lastSyncedTime,
+    isAutoSyncActive,
+    setIsAutoSyncActive
+  } = useApp();
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState('');
+
+  const handleSaveAllToGoogleSheet = async () => {
+    setIsSyncing(true);
+    setSyncStatusMsg('Menyimpan seluruh data ke Google Sheet...');
+    const result = await sendToAppsScript('Data Penduduk', residents);
+    setIsSyncing(false);
+    if (result.success) {
+      alert('✅ Berhasil! Seluruh data penduduk telah tersimpan rapi di Google Sheets.');
+    } else {
+      alert(`⚠️ ${result.message}`);
+    }
+  };
+
+  const handleFetchFromGoogleSheet = async () => {
+    setIsSyncing(true);
+    setSyncStatusMsg('Mengambil data terbaru dari Google Sheet...');
+    const result = await fetchFromAppsScript('Data Penduduk');
+    setIsSyncing(false);
+    if (result.success) {
+      alert(`✅ Berhasil! ${result.message}`);
+    } else {
+      alert(`⚠️ ${result.message}`);
+    }
+  };
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,6 +169,41 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Real-time Status Badge */}
+          <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-xl text-xs font-semibold shadow-xs">
+            <Radio className={`w-3.5 h-3.5 ${isAutoSyncActive ? 'text-emerald-400 animate-pulse' : 'text-slate-400'}`} />
+            <span>
+              Real-Time: <strong className={isAutoSyncActive ? 'text-emerald-400' : 'text-slate-400'}>{isAutoSyncActive ? 'ON' : 'OFF'}</strong>
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono hidden md:inline">({lastSyncedTime})</span>
+            <button
+              onClick={() => setIsAutoSyncActive(!isAutoSyncActive)}
+              className="ml-1 text-[10px] underline text-blue-300 hover:text-blue-200"
+            >
+              {isAutoSyncActive ? 'Matikan' : 'Aktifkan'}
+            </button>
+          </div>
+
+          <button
+            onClick={handleSaveAllToGoogleSheet}
+            disabled={isSyncing}
+            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-600/20 transition-all flex items-center gap-1.5 disabled:opacity-50"
+            title="Simpan seluruh data penduduk ke Google Sheet jika ada penambahan manual di sheet"
+          >
+            <CloudUpload className="w-4 h-4 text-white" />
+            Simpan Semua ke Sheet
+          </button>
+
+          <button
+            onClick={handleFetchFromGoogleSheet}
+            disabled={isSyncing}
+            className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs rounded-xl border border-amber-300 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+            title="Tarik & sinkronkan data penduduk terbaru dari Google Sheet"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-amber-700 ${isSyncing ? 'animate-spin' : ''}`} />
+            Tarik Data Baru
+          </button>
+
           <button
             onClick={onOpenImportModal}
             className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors border border-slate-300 flex items-center gap-1.5"
@@ -152,9 +230,9 @@ export const ResidentView: React.FC<ResidentViewProps> = ({
 
           <button
             onClick={onOpenAddModal}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-600/20 transition-all flex items-center gap-1.5"
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 text-white" />
             Tambah Penduduk Baru
           </button>
         </div>

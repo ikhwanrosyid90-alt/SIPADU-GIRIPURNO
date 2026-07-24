@@ -105,6 +105,13 @@ export interface Resident {
   statusPerkawinan: MaritalStatus;
   golonganDarah: BloodType;
   kewarganegaraan: 'WNI' | 'WNA';
+  shdk?: FamilyRelation | string;
+  aktaLahir?: string;
+  noAktaLahir?: string;
+  aktaKawin?: string;
+  noAktaKawin?: string;
+  aktaCerai?: string;
+  noAktaCerai?: string;
   noHp: string;
   email: string;
   fotoUrl?: string;

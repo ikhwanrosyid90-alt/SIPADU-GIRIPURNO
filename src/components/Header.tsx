@@ -15,7 +15,8 @@ import {
   Sparkles,
   Building2,
   Settings,
-  Menu
+  Menu,
+  Radio
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -40,7 +41,9 @@ export const Header: React.FC<HeaderProps> = ({
     syncModuleToGoogleSheets,
     residents,
     resetDataToDefault,
-    villageConfig
+    villageConfig,
+    lastSyncedTime,
+    isAutoSyncActive
   } = useApp();
 
   const [showNotifMenu, setShowNotifMenu] = useState(false);
@@ -155,6 +158,12 @@ export const Header: React.FC<HeaderProps> = ({
           <FileSpreadsheet className="w-3.5 h-3.5" />
           <span className="text-[11px]">{isSyncingSheets ? 'Sync...' : 'Sheets'}</span>
         </button>
+
+        {/* Realtime HP & PC Sync Badge */}
+        <div className="hidden lg:flex items-center gap-1.5 bg-slate-900/80 text-emerald-300 text-[11px] font-mono px-2.5 py-1.5 rounded-md border border-emerald-500/30">
+          <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
+          <span>Sync Realtime: {lastSyncedTime}</span>
+        </div>
 
         {/* Google Workspace Cloud Status Badge */}
         <button

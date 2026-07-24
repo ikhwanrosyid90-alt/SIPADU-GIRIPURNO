@@ -31,6 +31,13 @@ export const ResidentModal: React.FC<ResidentModalProps> = ({
     statusPerkawinan: 'Kawin' as MaritalStatus,
     golonganDarah: 'O' as BloodType,
     kewarganegaraan: 'WNI' as 'WNI' | 'WNA',
+    shdk: 'Kepala Keluarga',
+    aktaLahir: 'Ada',
+    noAktaLahir: '',
+    aktaKawin: 'Tidak',
+    noAktaKawin: '',
+    aktaCerai: 'Tidak',
+    noAktaCerai: '',
     noHp: '',
     email: '',
     fotoKtpUrl: '',
@@ -63,6 +70,13 @@ export const ResidentModal: React.FC<ResidentModalProps> = ({
         statusPerkawinan: residentToEdit.statusPerkawinan || 'Kawin',
         golonganDarah: residentToEdit.golonganDarah || 'O',
         kewarganegaraan: residentToEdit.kewarganegaraan || 'WNI',
+        shdk: residentToEdit.shdk || 'Kepala Keluarga',
+        aktaLahir: residentToEdit.aktaLahir || 'Ada',
+        noAktaLahir: residentToEdit.noAktaLahir || '',
+        aktaKawin: residentToEdit.aktaKawin || 'Tidak',
+        noAktaKawin: residentToEdit.noAktaKawin || '',
+        aktaCerai: residentToEdit.aktaCerai || 'Tidak',
+        noAktaCerai: residentToEdit.noAktaCerai || '',
         noHp: residentToEdit.noHp || '',
         email: residentToEdit.email || '',
         fotoKtpUrl: residentToEdit.fotoKtpUrl || '',
@@ -91,6 +105,13 @@ export const ResidentModal: React.FC<ResidentModalProps> = ({
         statusPerkawinan: 'Kawin',
         golonganDarah: 'O',
         kewarganegaraan: 'WNI',
+        shdk: 'Kepala Keluarga',
+        aktaLahir: 'Ada',
+        noAktaLahir: '',
+        aktaKawin: 'Tidak',
+        noAktaKawin: '',
+        aktaCerai: 'Tidak',
+        noAktaCerai: '',
         noHp: '08' + Math.floor(1000000000 + Math.random() * 9000000000),
         email: '',
         fotoKtpUrl: '',
@@ -344,13 +365,92 @@ export const ResidentModal: React.FC<ResidentModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">No Telepon / WA</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Status Hubungan (SHDK)</label>
+                <select
+                  value={formData.shdk}
+                  onChange={(e) => setFormData({ ...formData, shdk: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-blue-900"
+                >
+                  <option value="Kepala Keluarga">Kepala Keluarga</option>
+                  <option value="Suami">Suami</option>
+                  <option value="Istri">Istri</option>
+                  <option value="Anak">Anak</option>
+                  <option value="Mantu">Mantu</option>
+                  <option value="Cucu">Cucu</option>
+                  <option value="Orang Tua">Orang Tua</option>
+                  <option value="Mertua">Mertua</option>
+                  <option value="Famili Lain">Famili Lain</option>
+                  <option value="Pembantu">Pembantu</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Akta Lahir</label>
+                <select
+                  value={formData.aktaLahir}
+                  onChange={(e) => setFormData({ ...formData, aktaLahir: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-medium text-slate-800"
+                >
+                  <option value="Ada">Ada</option>
+                  <option value="Tidak">Tidak</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">No. Akta Lahir</label>
                 <input
                   type="text"
-                  value={formData.noHp}
-                  onChange={(e) => setFormData({ ...formData, noHp: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs text-slate-800"
-                  placeholder="0812xxxx"
+                  value={formData.noAktaLahir}
+                  onChange={(e) => setFormData({ ...formData, noAktaLahir: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-mono text-slate-800"
+                  placeholder="No. Reg Akta"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Akta Kawin / Nikah</label>
+                <select
+                  value={formData.aktaKawin}
+                  onChange={(e) => setFormData({ ...formData, aktaKawin: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-medium text-slate-800"
+                >
+                  <option value="Ada">Ada</option>
+                  <option value="Tidak">Tidak</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">No. Akta Kawin</label>
+                <input
+                  type="text"
+                  value={formData.noAktaKawin}
+                  onChange={(e) => setFormData({ ...formData, noAktaKawin: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-mono text-slate-800"
+                  placeholder="No. Buku Nikah"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Akta Cerai</label>
+                <select
+                  value={formData.aktaCerai}
+                  onChange={(e) => setFormData({ ...formData, aktaCerai: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-medium text-slate-800"
+                >
+                  <option value="Ada">Ada</option>
+                  <option value="Tidak">Tidak</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">No. Akta Cerai</label>
+                <input
+                  type="text"
+                  value={formData.noAktaCerai}
+                  onChange={(e) => setFormData({ ...formData, noAktaCerai: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-mono text-slate-800"
+                  placeholder="No. Akta Cerai"
                 />
               </div>
             </div>

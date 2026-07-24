@@ -91,3 +91,38 @@ export function exportTableToPDF(title: string, headers: string[], rows: any[][]
 
   doc.save(`${fileName}_${new Date().toISOString().slice(0,10)}.pdf`);
 }
+
+export function formatResidentForSheet(res: any) {
+  return {
+    NIK: String(res.nik || ''),
+    NO_KK: String(res.noKk || ''),
+    NAMA_LGKP: String(res.namaLengkap || ''),
+    JENIS_KELAMIN: String(res.jenisKelamin || 'Laki-laki'),
+    TANGGAL_LAHIR: String(res.tanggalLahir || ''),
+    UMUR: calculateAge(res.tanggalLahir),
+    TEMPAT_LAHIR: String(res.tempatLahir || ''),
+    ALAMAT: String(res.alamatLengkap || ''),
+    NO_RT: String(res.rt || '001'),
+    NO_RW: String(res.rw || '001'),
+    SHDK: String(res.shdk || 'Kepala Keluarga'),
+    STATUS_KAWIN: String(res.statusPerkawinan || 'Belum Kawin'),
+    PENDIDIKAN: String(res.pendidikan || 'SMA/Sederajat'),
+    AGAMA: String(res.agama || 'Islam'),
+    PEKERJAAN: String(res.pekerjaan || 'Wiraswasta'),
+    AKTA_LAHIR: String(res.aktaLahir || 'Ada'),
+    NO_AKTA_LAHIR: String(res.noAktaLahir || ''),
+    AKTA_KAWIN: String(res.aktaKawin || 'Tidak'),
+    NO_AKTA_KAWIN: String(res.noAktaKawin || ''),
+    AKTA_CERAI: String(res.aktaCerai || 'Tidak'),
+    NO_AKTA_CERAI: String(res.noAktaCerai || ''),
+    NAMA_AYAH: String(res.namaAyah || ''),
+    NAMA_IBU: String(res.namaIbu || ''),
+    DUSUN: String(res.dusun || ''),
+    GOLONGAN_DARAH: String(res.golonganDarah || 'O'),
+    STATUS_PENDUDUK: String(res.statusTinggal || 'Tetap'),
+    STATUS_SOSIAL_EKONOMI: res.isMiskin ? 'Rentan/Miskin' : 'Mampu',
+    NO_HP: String(res.noHp || ''),
+    EMAIL: String(res.email || ''),
+    STATUS_AKTIF: String(res.statusAktif || 'Aktif')
+  };
+}

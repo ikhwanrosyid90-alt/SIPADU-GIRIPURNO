@@ -28,6 +28,7 @@ import {
   INITIAL_NOTIFICATIONS,
   INITIAL_VILLAGE_CONFIG
 } from '../data/initialData';
+import { formatResidentForSheet } from '../utils/helpers';
 
 export type ViewTab = 
   | 'dashboard' 
@@ -65,6 +66,9 @@ interface AppContextType {
   notifications: NotificationItem[];
   
   googleStatus: { connected: boolean; message: string };
+  lastSyncedTime: string;
+  isAutoSyncActive: boolean;
+  setIsAutoSyncActive: (active: boolean) => void;
   
   appsScriptUrl: string;
   setAppsScriptUrl: (url: string) => void;
@@ -185,6 +189,85 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
 
   const [googleStatus, setGoogleStatus] = useState({ connected: true, message: 'Google Workspace Terhubung (Sheets & Drive)' });
+  const [lastSyncedTime, setLastSyncedTime] = useState<string>(() => new Date().toLocaleTimeString('id-ID'));
+  const [isAutoSyncActive, setIsAutoSyncActive] = useState<boolean>(true);
+
+  // Automatic KK synchronization whenever residents change
+  useEffect(() => {
+    if (!residents || residents.length === 0) return;
+
+    setFamilyCards(prevCards => {
+      const kkMap = new Map<string, Resident[]>();
+      residents.forEach(r => {
+        if (!r.noKk) return;
+        const cleanKk = String(r.noKk).trim();
+        if (!cleanKk) return;
+        if (!kkMap.has(cleanKk)) {
+          kkMap.set(cleanKk, []);
+        }
+        kkMap.get(cleanKk)!.push(r);
+      });
+
+      const updatedCards: FamilyCard[] = [];
+
+      kkMap.forEach((members, noKk) => {
+        const existing = prevCards.find(k => String(k.noKk).trim() === noKk);
+        
+        // Find kepala keluarga (SHDK includes 'KEPALA' or existing head or first member)
+        const head = members.find(r => 
+          (r.shdk && String(r.shdk).toUpperCase().includes('KEPALA')) ||
+          (existing && r.id === existing.headResidentId)
+        ) || members[0];
+
+        const mappedMembers = members.map(m => ({
+          residentId: m.id,
+          nik: m.nik,
+          namaLengkap: m.namaLengkap,
+          hubunganKeluarga: (m.shdk || 'Anggota Keluarga') as any,
+          jenisKelamin: m.jenisKelamin,
+          tanggalLahir: m.tanggalLahir
+        }));
+
+        if (existing) {
+          updatedCards.push({
+            ...existing,
+            headResidentId: head?.id || existing.headResidentId,
+            namaKepalaKeluarga: head?.namaLengkap || existing.namaKepalaKeluarga,
+            alamatLengkap: head?.alamatLengkap || members[0]?.alamatLengkap || existing.alamatLengkap,
+            rt: head?.rt || members[0]?.rt || existing.rt,
+            rw: head?.rw || members[0]?.rw || existing.rw,
+            dusun: head?.dusun || members[0]?.dusun || existing.dusun,
+            members: mappedMembers
+          });
+        } else {
+          updatedCards.push({
+            id: 'KK-' + noKk,
+            noKk,
+            headResidentId: head?.id || '',
+            namaKepalaKeluarga: head?.namaLengkap || 'Belum Ditentukan',
+            alamatLengkap: head?.alamatLengkap || members[0]?.alamatLengkap || 'Jl. Desa Utama',
+            rt: head?.rt || members[0]?.rt || '001',
+            rw: head?.rw || members[0]?.rw || '001',
+            dusun: head?.dusun || members[0]?.dusun || '',
+            tanggalPenerbitan: new Date().toISOString().slice(0, 10),
+            members: mappedMembers,
+            history: [
+              {
+                id: 'HKK-' + Date.now(),
+                timestamp: new Date().toLocaleString('id-ID'),
+                user: 'Sistem Sinkronisasi',
+                role: 'Otomatis',
+                action: 'Tambah',
+                notes: 'Penerbitan KK otomatis dari data penduduk'
+              }
+            ]
+          });
+        }
+      });
+
+      return updatedCards;
+    });
+  }, [residents]);
 
   // Persistence to localStorage
   useEffect(() => {
@@ -520,40 +603,100 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (result.success && result.data) {
         logAudit('Google Apps Script', 'Import Data', `Berhasil mengambil data dari sheet ${sheetName}`);
         
-        // If sheet is Data Penduduk and contains items, update residents state
-        if (sheetName === 'Data Penduduk' && Array.isArray(result.data.data) && result.data.data.length > 0) {
-          const mappedResidents = result.data.data.map((item: any, idx: number) => ({
-            id: item.nik || `res-gas-${idx}`,
-            nik: String(item.nik || item.nik_ || `320112${100000 + idx}`),
-            noKk: String(item.no_kk || item.nokk || '3201121005100001'),
-            namaLengkap: item.nama_lengkap || item.namalengkap || item.nama || 'Warga Desa',
-            namaAyah: item.nama_ayah || item.namaayah || item.ayah || '',
-            namaIbu: item.nama_ibu || item.namaibu || item.ibu || '',
-            tempatLahir: item.tempat_lahir || item.tempatlahir || 'Bogor',
-            tanggalLahir: item.tanggal_lahir || item.tanggallahir || '1990-01-01',
-            jenisKelamin: item.jenis_kelamin || item.jeniskelamin || 'Laki-laki',
-            agama: item.agama || 'Islam',
-            pendidikan: item.pendidikan || 'SMA/Sederajat',
-            pekerjaan: item.pekerjaan || 'Wiraswasta',
-            statusPerkawinan: item.status_perkawinan || item.statusperkawinan || 'Kawin',
-            golonganDarah: item.golongan_darah || item.golongandarah || 'O',
-            dusun: item.dusun || 'Dusun 1 Krajan',
-            rw: item.rw || 'RW 01',
-            rt: item.rt || 'RT 01',
-            alamatLengkap: item.alamat_lengkap || item.alamat || 'Jl. Desa Utama No. 12',
-            statusPenduduk: item.status_penduduk || item.statuspenduduk || 'Tetap',
-            statusSosialEkonomi: item.status_sosial_ekonomi || item.statussosialekonomi || 'Mampu',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }));
+        let rows = Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : []);
+
+        if (sheetName === 'Data Penduduk' && rows.length > 0) {
+          const mappedResidents = rows.map((item: any, idx: number) => {
+            const getVal = (...keys: string[]) => {
+              for (const k of keys) {
+                if (item[k] !== undefined && item[k] !== null && String(item[k]).trim() !== '') return String(item[k]);
+                const lowerK = k.toLowerCase().replace(/_/g, '');
+                for (const itemKey of Object.keys(item)) {
+                  if (itemKey.toLowerCase().replace(/_/g, '') === lowerK && item[itemKey] !== undefined && item[itemKey] !== null && String(item[itemKey]).trim() !== '') {
+                    return String(item[itemKey]);
+                  }
+                }
+              }
+              return '';
+            };
+
+            const nik = getVal('NIK', 'nik') || `320112${10000000 + idx}`;
+            const noKk = getVal('NO_KK', 'no_kk', 'nokk') || '3201121005100001';
+            const namaLengkap = getVal('NAMA_LGKP', 'nama_lengkap', 'namalengkap', 'nama') || 'Warga Desa';
+            const jenisKelamin = getVal('JENIS_KELAMIN', 'jenis_kelamin', 'jeniskelamin') || 'Laki-laki';
+            const tanggalLahir = getVal('TANGGAL_LAHIR', 'tanggal_lahir', 'tanggallahir') || '1990-01-01';
+            const tempatLahir = getVal('TEMPAT_LAHIR', 'tempat_lahir', 'tempatlahir') || 'Bogor';
+            const alamatLengkap = getVal('ALAMAT', 'alamat_lengkap', 'alamat') || 'Jl. Desa Utama No. 12';
+            const rt = getVal('NO_RT', 'rt') || '001';
+            const rw = getVal('NO_RW', 'rw') || '001';
+            const shdk = getVal('SHDK', 'status_hubungan_keluarga', 'shdk') || 'Kepala Keluarga';
+            const statusPerkawinan = getVal('STATUS_KAWIN', 'status_perkawinan', 'statuskawin') || 'Kawin';
+            const pendidikan = getVal('PENDIDIKAN', 'pendidikan') || 'SMA/Sederajat';
+            const agama = getVal('AGAMA', 'agama') || 'Islam';
+            const pekerjaan = getVal('PEKERJAAN', 'pekerjaan') || 'Wiraswasta';
+            const aktaLahir = getVal('AKTA_LAHIR', 'akta_lahir') || 'Ada';
+            const noAktaLahir = getVal('NO_AKTA_LAHIR', 'no_akta_lahir') || '';
+            const aktaKawin = getVal('AKTA_KAWIN', 'akta_kawin') || 'Tidak';
+            const noAktaKawin = getVal('NO_AKTA_KAWIN', 'no_akta_kawin') || '';
+            const aktaCerai = getVal('AKTA_CERAI', 'akta_cerai') || 'Tidak';
+            const noAktaCerai = getVal('NO_AKTA_CERAI', 'no_akta_cerai') || '';
+            const namaAyah = getVal('NAMA_AYAH', 'nama_ayah', 'ayah') || '';
+            const namaIbu = getVal('NAMA_IBU', 'nama_ibu', 'ibu') || '';
+            const dusun = getVal('DUSUN', 'dusun') || 'Dusun Suka Makmur';
+            const golonganDarah = getVal('GOLONGAN_DARAH', 'golongan_darah') || 'O';
+            const statusPenduduk = getVal('STATUS_PENDUDUK', 'status_penduduk', 'status_tinggal') || 'Tetap';
+            const statusSosial = getVal('STATUS_SOSIAL_EKONOMI', 'status_sosial_ekonomi');
+            const isMiskin = statusSosial.toLowerCase().includes('miskin') || getVal('isMiskin') === 'true';
+            const noHp = getVal('NO_HP', 'no_hp', 'nohp') || '';
+            const email = getVal('EMAIL', 'email') || '';
+            const statusAktif = getVal('STATUS_AKTIF', 'status_aktif') || 'Aktif';
+
+            return {
+              id: nik ? `RES-${nik}` : `res-gas-${idx}`,
+              nik,
+              noKk,
+              namaLengkap,
+              namaAyah,
+              namaIbu,
+              tempatLahir,
+              tanggalLahir,
+              jenisKelamin: (jenisKelamin.toLowerCase().includes('p') && !jenisKelamin.toLowerCase().includes('laki')) ? 'Perempuan' : 'Laki-laki',
+              agama: agama as any,
+              pendidikan: pendidikan as any,
+              pekerjaan: pekerjaan as any,
+              statusPerkawinan: statusPerkawinan as any,
+              golonganDarah: golonganDarah as any,
+              kewarganegaraan: 'WNI',
+              shdk,
+              aktaLahir,
+              noAktaLahir,
+              aktaKawin,
+              noAktaKawin,
+              aktaCerai,
+              noAktaCerai,
+              noHp,
+              email,
+              alamatLengkap,
+              rt,
+              rw,
+              dusun,
+              statusTinggal: statusPenduduk as any,
+              statusAktif: statusAktif as any,
+              isMiskin,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+          });
+
           setResidents(mappedResidents);
           localStorage.setItem('sipadu_residents', JSON.stringify(mappedResidents));
+          setLastSyncedTime(new Date().toLocaleTimeString('id-ID'));
         }
 
         return { 
           success: true, 
-          data: result.data.data || [], 
-          message: `Berhasil mengambil ${result.data.total || (result.data.data ? result.data.data.length : 0)} baris data dari Google Sheets!` 
+          data: rows, 
+          message: `Berhasil mengambil ${rows.length} baris data dari Google Sheets!` 
         };
       }
       return { success: false, message: result.error || 'Gagal mengambil data dari Google Apps Script' };
@@ -562,17 +705,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const sendToAppsScript = async (sheetName: string, data: any, action: string = 'overwrite') => {
+  const sendToAppsScript = async (sheetName: string = 'Data Penduduk', customData?: any) => {
     try {
-      const headers = Array.isArray(data) && data.length > 0 ? Object.keys(data[0]) : [];
-      const rows = Array.isArray(data) ? data.map(item => Object.values(item)) : [];
+      const rawData = customData || residents;
+      const formattedData = sheetName === 'Data Penduduk' && Array.isArray(rawData) 
+        ? rawData.map(formatResidentForSheet)
+        : rawData;
+
+      const headers = Array.isArray(formattedData) && formattedData.length > 0 ? Object.keys(formattedData[0]) : [];
+      const rows = Array.isArray(formattedData) ? formattedData.map(item => Object.values(item)) : [];
 
       const payload = {
         sheetName,
-        action,
+        action: 'overwrite',
         headers,
         rows,
-        data
+        data: formattedData
       };
 
       const res = await fetch('/api/apps-script/send', {
@@ -582,14 +730,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       });
       const result = await res.json();
       if (result.success) {
-        logAudit('Google Apps Script', 'Export Data', `Mengirim data ${sheetName} ke Google Sheets via Apps Script`);
-        return { success: true, message: `Data ${sheetName} berhasil dikirim ke Google Sheets (Apps Script)!` };
+        setLastSyncedTime(new Date().toLocaleTimeString('id-ID'));
+        logAudit('Google Apps Script', 'Export Data', `Mengirim ${formattedData.length} data ${sheetName} ke Google Sheets via Apps Script`);
+        return { success: true, message: `Data ${sheetName} (${formattedData.length} baris) berhasil disimpan ke Google Sheets!` };
       }
       return { success: false, message: result.error || 'Gagal mengirim data ke Google Apps Script' };
     } catch (err: any) {
       return { success: false, message: err.message || 'Gagal tersambung ke Apps Script API' };
     }
   };
+
+  // Real-time background sync interval (polls Apps Script every 20 seconds for multi-device sync)
+  useEffect(() => {
+    if (!isAutoSyncActive || !appsScriptUrl) return;
+
+    const intervalId = setInterval(() => {
+      fetchFromAppsScript('Data Penduduk');
+    }, 20000);
+
+    return () => clearInterval(intervalId);
+  }, [isAutoSyncActive, appsScriptUrl]);
 
   // Google Sync Services
   const syncModuleToGoogleSheets = async (moduleName: string, data: any) => {
@@ -673,6 +833,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         auditLogs,
         notifications,
         googleStatus,
+        lastSyncedTime,
+        isAutoSyncActive,
+        setIsAutoSyncActive,
         appsScriptUrl,
         setAppsScriptUrl,
         fetchFromAppsScript,
